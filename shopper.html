@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personal Shopper IA - WillWeb</title>
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1a1a; /* Fundo escuro para destacar a câmera */
+            background-color: #1a1a1a;
             color: #ffffff;
             display: flex;
             flex-direction: column;
@@ -19,140 +22,214 @@
             box-sizing: border-box;
         }
 
-        h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        p {
-            color: #aaaaaa;
-            margin-bottom: 30px;
-            text-align: center;
-        }
+        h1 { font-size: 24px; margin-bottom: 5px; text-align: center; }
+        p { color: #aaaaaa; margin-bottom: 25px; text-align: center; font-size: 14px; }
 
         .camera-container {
             position: relative;
             width: 100%;
-            max-width: 640px;
+            max-width: 400px; /* Mais estreito para focar no rosto */
             border-radius: 16px;
             overflow: hidden;
             box-shadow: 0 15px 35px rgba(0,0,0,0.5);
             background-color: #000;
             border: 2px solid #333;
+            display: flex;
+            justify-content: center;
         }
 
-        /* O vídeo da webcam */
         video {
             width: 100%;
             height: auto;
             display: block;
-            /* Inverte a câmera horizontalmente para parecer um espelho real */
+            /* Inverte a câmera horizontalmente */
             transform: scaleX(-1); 
         }
 
-        /* O canvas onde a IA vai desenhar os pontos do rosto depois */
         canvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* Para não atrapalhar cliques */
+            /* Inverte o canvas também para os pontos acompanharem o vídeo espelhado */
+            transform: scaleX(-1);
+            pointer-events: none;
         }
 
-        .loading-text {
+        .status-badge {
             position: absolute;
-            top: 50%;
+            top: 15px;
             left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 18px;
-            color: #fff;
-            z-index: 0;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #ffaa00;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10;
+            backdrop-filter: blur(4px);
         }
 
         .painel-recomendacao {
-            margin-top: 30px;
+            margin-top: 25px;
             background: #2a2a2a;
-            padding: 20px 40px;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
             border-radius: 12px;
             text-align: center;
             border-left: 4px solid #0866ff;
-            display: none; /* Escondido até a IA analisar o rosto */
+            display: none;
+            box-sizing: border-box;
+            animation: fadeIn 0.5s ease;
         }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .painel-recomendacao h3 { color: #0866ff; margin-top: 0; margin-bottom: 10px; }
+        .painel-recomendacao p { color: #fff; margin: 0; font-size: 15px; }
 
         .btn-analisar {
             margin-top: 20px;
-            padding: 12px 30px;
-            background-color: #0866ff;
-            color: white;
+            padding: 15px 30px;
+            background-color: #444; /* Começa cinza até a IA carregar */
+            color: #888;
             border: none;
             border-radius: 8px;
             font-size: 16px;
             font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s;
+            cursor: not-allowed;
+            transition: all 0.3s;
+            width: 100%;
+            max-width: 400px;
         }
 
-        .btn-analisar:hover {
-            background-color: #0052d6;
+        .btn-analisar.pronto {
+            background-color: #0866ff;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(8, 102, 255, 0.4);
         }
+
+        .btn-analisar.pronto:active { transform: scale(0.98); }
+
     </style>
 </head>
 <body>
 
     <h1>Descubra seus Óculos Ideais</h1>
-    <p>Nossa Inteligência Artificial analisa o formato do seu rosto.</p>
+    <p>Nossa IA mapeia 68 pontos do seu rosto.</p>
 
     <div class="camera-container">
-        <div class="loading-text" id="status-camera">Ligando câmera...</div>
+        <div class="status-badge" id="status-ia">Carregando Cérebro da IA...</div>
         <video id="video" autoplay muted playsinline></video>
         <canvas id="overlay"></canvas>
     </div>
 
-    <button class="btn-analisar" id="btn-analisar">Analisar Meu Rosto</button>
+    <button class="btn-analisar" id="btn-analisar" disabled>Aguarde a IA...</button>
 
     <div class="painel-recomendacao" id="painel-resultados">
-        <h3 id="resultado-formato">Analisando...</h3>
-        <p id="resultado-dica">Aguarde a leitura facial.</p>
+        <h3>Rosto <span id="resultado-formato">...</span></h3>
+        <p id="resultado-dica">Analisando proporções matemáticas.</p>
     </div>
 
     <script>
         const video = document.getElementById('video');
-        const statusCamera = document.getElementById('status-camera');
+        const overlay = document.getElementById('overlay');
+        const statusIA = document.getElementById('status-ia');
         const btnAnalisar = document.getElementById('btn-analisar');
         const painelResultados = document.getElementById('painel-resultados');
+        const formatoTexto = document.getElementById('resultado-formato');
+        const dicaTexto = document.getElementById('resultado-dica');
 
-        // Função para iniciar a Webcam do usuário
+        // URL com os arquivos de treinamento da IA (pesos)
+        const MODELS_URL = 'https://vladmandic.github.io/face-api/model/';
+
+        // Passo 1: Ligar a Câmera
         async function iniciarCamera() {
             try {
-                // Pede permissão para acessar o vídeo
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "user" } // 'user' força a câmera frontal no celular
-                });
-                
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = stream;
-                
-                // Quando o vídeo começar a rodar, tira o texto de "Carregando"
-                video.onloadedmetadata = () => {
-                    statusCamera.style.display = 'none';
-                };
             } catch (err) {
-                console.error("Erro ao acessar a câmera: ", err);
-                statusCamera.textContent = "Câmera bloqueada ou não encontrada.";
-                statusCamera.style.color = "#ff4444";
+                statusIA.textContent = "Erro na câmera. Permita o acesso.";
+                statusIA.style.color = "#ff4444";
             }
         }
 
-        // Simula o clique do botão (A IA vai entrar aqui na próxima etapa)
-        btnAnalisar.addEventListener('click', () => {
-            painelResultados.style.display = 'block';
-            document.getElementById('resultado-formato').textContent = "Calibrando IA...";
-            document.getElementById('resultado-dica').textContent = "Na próxima etapa, vamos conectar o cérebro da aplicação aqui.";
+        // Passo 2: Carregar os modelos da IA
+        async function carregarIA() {
+            // Carrega o detector de rosto leve e o mapeador de 68 pontos
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL)
+            ]);
+            
+            // IA pronta! Atualiza a interface
+            statusIA.textContent = "IA Pronta!";
+            statusIA.style.color = "#00ff00";
+            setTimeout(() => statusIA.style.display = 'none', 2000);
+            
+            btnAnalisar.textContent = "Analisar Meu Rosto";
+            btnAnalisar.classList.add('pronto');
+            btnAnalisar.disabled = false;
+        }
+
+        // Passo 3: Executar a Análise ao clicar no botão
+        btnAnalisar.addEventListener('click', async () => {
+            btnAnalisar.textContent = "Escaneando...";
+            painelResultados.style.display = 'none'; // Esconde resultados anteriores
+
+            // Ajusta o canvas para ter o mesmo tamanho do vídeo
+            const displaySize = { width: video.videoWidth, height: video.videoHeight };
+            faceapi.matchDimensions(overlay, displaySize);
+
+            // Tira um 'print' do vídeo e passa para a IA achar o rosto e os pontos
+            const deteccoes = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+
+            if (deteccoes) {
+                // Desenha os pontos verdes no rosto (efeito wow!)
+                const resizedDetections = faceapi.resizeResults(deteccoes, displaySize);
+                overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
+                faceapi.draw.drawFaceLandmarks(overlay, resizedDetections);
+
+                // A MATEMÁTICA DO VISAGISMO
+                // Pega a "caixa" que envolve o rosto para calcular a proporção
+                const largura = deteccoes.detection.box.width;
+                const altura = deteccoes.detection.box.height;
+                const proporcao = altura / largura;
+
+                // Lógica simples de recomendação baseada na proporção do rosto
+                let formato = "";
+                let recomendacao = "";
+
+                if (proporcao > 1.35) {
+                    formato = "Oval / Alongado";
+                    recomendacao = "Seu rosto é versátil! Armações grandes, retangulares ou estilo Aviador ficam perfeitas, pois criam a ilusão de um rosto mais largo.";
+                } else {
+                    formato = "Quadrado / Redondo";
+                    recomendacao = "Seu rosto tem proporções equilibradas. Recomendamos armações estilo Gatinho (Cat-Eye), Ovais ou com ângulos suaves para harmonizar os traços.";
+                }
+
+                // Exibe o resultado
+                formatoTexto.textContent = formato;
+                dicaTexto.textContent = recomendacao;
+                painelResultados.style.display = 'block';
+
+            } else {
+                alert("Não consegui encontrar um rosto claro. Vá para um lugar mais iluminado e olhe para a câmera!");
+            }
+
+            btnAnalisar.textContent = "Analisar Novamente";
         });
 
-        // Liga a câmera assim que a página carregar
-        window.addEventListener('load', iniciarCamera);
+        // Executa as funções quando a página carregar
+        window.addEventListener('load', () => {
+            iniciarCamera();
+            // Inicia o download da IA em segundo plano
+            carregarIA(); 
+        });
     </script>
 </body>
 </html>
