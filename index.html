@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soluções para Óticas | WillWeb</title>
+    <style>
+        :root {
+            --primary-color: #0866ff;
+            --bg-color: #0f1115;
+            --card-bg: #1a1d24;
+            --text-light: #f5f6f8;
+            --text-muted: #a0aab2;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            padding: 50px 20px 30px;
+            background: linear-gradient(180deg, rgba(8,102,255,0.1) 0%, rgba(15,17,21,1) 100%);
+        }
+
+        .brand {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--primary-color);
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin: 0 0 15px 0;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            padding: 40px 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            width: 100%;
+            max-width: 350px;
+            text-align: center;
+            border: 1px solid #2a2e39;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(8, 102, 255, 0.15);
+            border-color: rgba(8, 102, 255, 0.4);
+        }
+
+        .icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 22px;
+            margin: 0 0 15px 0;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            font-size: 15px;
+            line-height: 1.6;
+            flex: 1;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 14px 24px;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #0052d6;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            border-top: 1px solid #2a2e39;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .contact-links {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .contact-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .contact-links a:hover {
+            color: var(--primary-color);
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 26px; }
+            .card { padding: 25px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="brand">WillWeb Soluções Tecnológicas</span>
+        <h1>Inovação para o Setor Ótico</h1>
+        <p class="subtitle">Apresente seus produtos com tecnologia de ponta. Aumente o ticket médio e engaje seus clientes com experiências interativas.</p>
+    </header>
+
+    <main class="container">
+        
+        <div class="card">
+            <div class="icon">👓</div>
+            <h2>Simulador de Lentes</h2>
+            <p>Quebre as objeções de preço no balcão. Mostre visualmente para o seu cliente a diferença real entre uma lente comum e uma lente premium com tratamento antirreflexo ou filtro azul.</p>
+            <a href="simulador.html" class="btn">Abrir Simulador</a>
+        </div>
+
+        <div class="card">
+            <div class="icon">🤖</div>
+            <h2>Personal Shopper IA</h2>
+            <p>Ofereça uma experiência VIP. Nossa inteligência artificial escaneia o rosto do cliente em tempo real, analisa as proporções matemáticas e recomenda a armação perfeita.</p>
+            <a href="shopper.html" class="btn">Abrir Espelho Mágico</a>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>Desenvolvido por <strong>WillWeb Soluções Tecnológicas</strong></p>
+        <div class="contact-links">
+            <a href="https://wa.me/5584996106961" target="_blank">WhatsApp</a>
+            <a href="mailto:willianocosta.cover@gmail.com">E-mail</a>
+            <a href="https://instagram.com/papaipersonalpancreas" target="_blank">Instagram</a>
+        </div>
+    </footer>
+
+</body>
+</html>
