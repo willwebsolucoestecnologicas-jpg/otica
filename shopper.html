@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Shopper IA - WillWeb</title>
+    <title>Provador Virtual IA - WillWeb</title>
     
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 
@@ -28,7 +28,7 @@
         .camera-container {
             position: relative;
             width: 100%;
-            max-width: 400px; /* Mais estreito para focar no rosto */
+            max-width: 400px;
             border-radius: 16px;
             overflow: hidden;
             box-shadow: 0 15px 35px rgba(0,0,0,0.5);
@@ -42,8 +42,7 @@
             width: 100%;
             height: auto;
             display: block;
-            /* Inverte a câmera horizontalmente */
-            transform: scaleX(-1); 
+            transform: scaleX(-1); /* Efeito espelho */
         }
 
         canvas {
@@ -52,8 +51,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            /* Inverte o canvas também para os pontos acompanharem o vídeo espelhado */
-            transform: scaleX(-1);
+            transform: scaleX(-1); /* Acompanha o espelho do vídeo */
             pointer-events: none;
         }
 
@@ -69,32 +67,12 @@
             font-size: 12px;
             font-weight: bold;
             z-index: 10;
-            backdrop-filter: blur(4px);
         }
-
-        .painel-recomendacao {
-            margin-top: 25px;
-            background: #2a2a2a;
-            padding: 20px;
-            width: 100%;
-            max-width: 400px;
-            border-radius: 12px;
-            text-align: center;
-            border-left: 4px solid #0866ff;
-            display: none;
-            box-sizing: border-box;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .painel-recomendacao h3 { color: #0866ff; margin-top: 0; margin-bottom: 10px; }
-        .painel-recomendacao p { color: #fff; margin: 0; font-size: 15px; }
 
         .btn-analisar {
-            margin-top: 20px;
+            margin-top: 25px;
             padding: 15px 30px;
-            background-color: #444; /* Começa cinza até a IA carregar */
+            background-color: #444;
             color: #888;
             border: none;
             border-radius: 8px;
@@ -112,122 +90,125 @@
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(8, 102, 255, 0.4);
         }
-
-        .btn-analisar.pronto:active { transform: scale(0.98); }
-
     </style>
 </head>
 <body>
 
-    <h1>Descubra seus Óculos Ideais</h1>
-    <p>Nossa IA mapeia 68 pontos do seu rosto.</p>
+    <h1>Provador Virtual de Óculos</h1>
+    <p>Experimente armações em tempo real com IA.</p>
 
     <div class="camera-container">
-        <div class="status-badge" id="status-ia">Carregando Cérebro da IA...</div>
+        <div class="status-badge" id="status-ia">Carregando IA...</div>
         <video id="video" autoplay muted playsinline></video>
         <canvas id="overlay"></canvas>
     </div>
 
-    <button class="btn-analisar" id="btn-analisar" disabled>Aguarde a IA...</button>
+    <button class="btn-analisar" id="btn-analisar" disabled>Aguarde...</button>
 
-    <div class="painel-recomendacao" id="painel-resultados">
-        <h3>Rosto <span id="resultado-formato">...</span></h3>
-        <p id="resultado-dica">Analisando proporções matemáticas.</p>
-    </div>
+    <img id="img-oculos" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Sunglasses_icon.svg/512px-Sunglasses_icon.svg.png" style="display:none;" crossorigin="anonymous">
 
     <script>
         const video = document.getElementById('video');
         const overlay = document.getElementById('overlay');
         const statusIA = document.getElementById('status-ia');
         const btnAnalisar = document.getElementById('btn-analisar');
-        const painelResultados = document.getElementById('painel-resultados');
-        const formatoTexto = document.getElementById('resultado-formato');
-        const dicaTexto = document.getElementById('resultado-dica');
+        const imgOculos = document.getElementById('img-oculos');
 
-        // URL com os arquivos de treinamento da IA (pesos)
         const MODELS_URL = 'https://vladmandic.github.io/face-api/model/';
+        let provadorAtivo = false;
 
-        // Passo 1: Ligar a Câmera
         async function iniciarCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = stream;
             } catch (err) {
-                statusIA.textContent = "Erro na câmera. Permita o acesso.";
-                statusIA.style.color = "#ff4444";
+                statusIA.textContent = "Erro na câmera.";
             }
         }
 
-        // Passo 2: Carregar os modelos da IA
         async function carregarIA() {
-            // Carrega o detector de rosto leve e o mapeador de 68 pontos
             await Promise.all([
                 faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
                 faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL)
             ]);
             
-            // IA pronta! Atualiza a interface
-            statusIA.textContent = "IA Pronta!";
+            statusIA.textContent = "Pronto!";
             statusIA.style.color = "#00ff00";
             setTimeout(() => statusIA.style.display = 'none', 2000);
             
-            btnAnalisar.textContent = "Analisar Meu Rosto";
+            btnAnalisar.textContent = "Ligar Provador Virtual";
             btnAnalisar.classList.add('pronto');
             btnAnalisar.disabled = false;
         }
 
-        // Passo 3: Executar a Análise ao clicar no botão
-        btnAnalisar.addEventListener('click', async () => {
-            btnAnalisar.textContent = "Escaneando...";
-            painelResultados.style.display = 'none'; // Esconde resultados anteriores
+        // A Mágica do Loop em Tempo Real
+        async function loopProvador() {
+            // Se o vídeo pausar, para o loop
+            if (video.paused || video.ended || !provadorAtivo) return;
 
-            // Ajusta o canvas para ter o mesmo tamanho do vídeo
             const displaySize = { width: video.videoWidth, height: video.videoHeight };
             faceapi.matchDimensions(overlay, displaySize);
 
-            // Tira um 'print' do vídeo e passa para a IA achar o rosto e os pontos
+            // Escaneia o rosto muito rápido a cada frame do vídeo
             const deteccoes = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
 
+            const ctx = overlay.getContext('2d');
+            ctx.clearRect(0, 0, overlay.width, overlay.height); // Limpa o desenho anterior
+
             if (deteccoes) {
-                // Desenha os pontos verdes no rosto (efeito wow!)
                 const resizedDetections = faceapi.resizeResults(deteccoes, displaySize);
-                overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
-                faceapi.draw.drawFaceLandmarks(overlay, resizedDetections);
+                const landmarks = resizedDetections.landmarks;
 
-                // A MATEMÁTICA DO VISAGISMO
-                // Pega a "caixa" que envolve o rosto para calcular a proporção
-                const largura = deteccoes.detection.box.width;
-                const altura = deteccoes.detection.box.height;
-                const proporcao = altura / largura;
+                // Captura a ponta exterior do olho esquerdo (ponto 36) e do direito (ponto 45)
+                const olhoEsq = landmarks.positions[36];
+                const olhoDir = landmarks.positions[45];
 
-                // Lógica simples de recomendação baseada na proporção do rosto
-                let formato = "";
-                let recomendacao = "";
+                // 1. Calcula a largura do óculos (Distância entre os olhos * um multiplicador)
+                const dx = olhoDir.x - olhoEsq.x;
+                const dy = olhoDir.y - olhoEsq.y;
+                const distanciaOlhos = Math.sqrt(dx * dx + dy * dy);
+                const larguraOculos = distanciaOlhos * 2.2; // 2.2 é ideal para cobrir as têmporas
 
-                if (proporcao > 1.35) {
-                    formato = "Oval / Alongado";
-                    recomendacao = "Seu rosto é versátil! Armações grandes, retangulares ou estilo Aviador ficam perfeitas, pois criam a ilusão de um rosto mais largo.";
-                } else {
-                    formato = "Quadrado / Redondo";
-                    recomendacao = "Seu rosto tem proporções equilibradas. Recomendamos armações estilo Gatinho (Cat-Eye), Ovais ou com ângulos suaves para harmonizar os traços.";
-                }
+                // 2. Calcula a altura proporcional à imagem original
+                const proporcaoImagem = imgOculos.height / imgOculos.width;
+                const alturaOculos = larguraOculos * proporcaoImagem;
 
-                // Exibe o resultado
-                formatoTexto.textContent = formato;
-                dicaTexto.textContent = recomendacao;
-                painelResultados.style.display = 'block';
+                // 3. Calcula a inclinação (ângulo) da cabeça
+                const angulo = Math.atan2(dy, dx);
 
-            } else {
-                alert("Não consegui encontrar um rosto claro. Vá para um lugar mais iluminado e olhe para a câmera!");
+                // 4. Calcula o centro (entre os dois olhos)
+                const centroX = (olhoEsq.x + olhoDir.x) / 2;
+                const centroY = (olhoEsq.y + olhoDir.y) / 2;
+
+                // Desenha o óculos no rosto!
+                ctx.save();
+                ctx.translate(centroX, centroY);
+                ctx.rotate(angulo);
+                // Desenha puxando metade do tamanho para cada lado para centralizar
+                ctx.drawImage(imgOculos, -larguraOculos / 2, -alturaOculos / 2, larguraOculos, alturaOculos);
+                ctx.restore();
             }
 
-            btnAnalisar.textContent = "Analisar Novamente";
+            // Chama a função de novo instantaneamente para o próximo frame
+            requestAnimationFrame(loopProvador);
+        }
+
+        btnAnalisar.addEventListener('click', () => {
+            if (!provadorAtivo) {
+                provadorAtivo = true;
+                btnAnalisar.textContent = "Desligar Provador";
+                btnAnalisar.style.backgroundColor = "#ff4444"; // Fica vermelho para desligar
+                loopProvador(); // Inicia o rastreamento
+            } else {
+                provadorAtivo = false;
+                btnAnalisar.textContent = "Ligar Provador Virtual";
+                btnAnalisar.style.backgroundColor = "#0866ff";
+                overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height); // Limpa a tela
+            }
         });
 
-        // Executa as funções quando a página carregar
         window.addEventListener('load', () => {
             iniciarCamera();
-            // Inicia o download da IA em segundo plano
             carregarIA(); 
         });
     </script>
