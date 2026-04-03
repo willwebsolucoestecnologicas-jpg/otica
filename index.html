@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Lentes Premium - WillWeb</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column; /* Mudamos para coluna para os botões ficarem embaixo */
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .simulador-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            --posicao-linha: 50%;
+            background-color: #000; /* Fundo escuro enquanto carrega as imagens */
+        }
+
+        .img-base, .img-sobreposta {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+            transition: opacity 0.3s ease; /* Transição suave ao trocar de imagem */
+        }
+
+        .img-base {
+            z-index: 1;
+        }
+
+        .img-sobreposta {
+            z-index: 2;
+            /* O filtro inicial agora é definido via JavaScript */
+            clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+        }
+
+        .slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0; 
+            cursor: ew-resize;
+            z-index: 10;
+            margin: 0;
+        }
+
+        .simulador-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: var(--posicao-linha);
+            width: 4px;
+            background-color: white;
+            z-index: 5;
+            transform: translateX(-50%);
+            box-shadow: 0 0 8px rgba(0,0,0,0.5);
+        }
+
+        .etiqueta {
+            position: absolute;
+            bottom: 20px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 6;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+        .etiqueta-esq { left: 20px; }
+        .etiqueta-dir { right: 20px; }
+
+        /* Estilo dos Botões */
+        .controles {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background-color: #e4e6eb;
+            color: #050505;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .btn:hover {
+            background-color: #d8dadf;
+        }
+
+        /* Botão Ativo com uma cor de destaque (Azul) */
+        .btn.ativo {
+            background-color: #0866ff;
+            color: white;
+            box-shadow: 0 4px 12px rgba(8, 102, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="simulador-container">
+        <div class="etiqueta etiqueta-esq" id="label-esq">Sem Tratamento</div>
+        <div class="etiqueta etiqueta-dir" id="label-dir">Lente Antirreflexo</div>
+
+        <img src="" class="img-base" id="img-base" alt="Visão Nítida">
+        <img src="" class="img-sobreposta" id="img-sobreposta" alt="Visão Embaciada">
+        
+        <input type="range" min="0" max="100" value="50" id="slider" class="slider">
+    </div>
+
+    <div class="controles">
+        <button class="btn ativo" onclick="mudarSimulacao('antirreflexo', this)">Lente Antirreflexo</button>
+        <button class="btn" onclick="mudarSimulacao('luzAzul', this)">Filtro de Luz Azul</button>
+        <button class="btn" onclick="mudarSimulacao('miopia', this)">Miopia (Grau Alto)</button>
+    </div>
+
+    <script>
+        // Elementos do DOM
+        const slider = document.getElementById('slider');
+        const imgSobreposta = document.getElementById('img-sobreposta');
+        const imgBase = document.getElementById('img-base');
+        const container = document.querySelector('.simulador-container');
+        const labelEsq = document.getElementById('label-esq');
+        const labelDir = document.getElementById('label-dir');
+
+        // Banco de Dados das Simulações
+        const simulacoes = {
+            antirreflexo: {
+                imagem: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+                filtro: "blur(3px) brightness(1.4) contrast(0.8)", // Simula faróis ofuscando
+                textoEsq: "Visão com Reflexos",
+                textoDir: "Lente Antirreflexo Premium"
+            },
+            luzAzul: {
+                imagem: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80", // Tela de computador
+                filtro: "brightness(1.2) contrast(1.1)", // Tela estourada e cansativa
+                // Aplicamos um filtro leve na base também para simular o conforto amarelo da lente
+                filtroBase: "sepia(0.3) brightness(0.9)", 
+                textoEsq: "Visão Cansativa (Luz Branca)",
+                textoDir: "Conforto Filtro Azul"
+            },
+            miopia: {
+                imagem: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80", // Paisagem urbana de dia
+                filtro: "blur(10px)", // Bem embaçado simulando grau alto
+                textoEsq: "Visão sem Óculos (Miopia)",
+                textoDir: "Visão Corrigida"
+            }
+        };
+
+        // Função para atualizar o slider ao arrastar
+        slider.addEventListener('input', (e) => {
+            const valor = e.target.value;
+            imgSobreposta.style.clipPath = `polygon(0 0, ${valor}% 0, ${valor}% 100%, 0 100%)`;
+            container.style.setProperty('--posicao-linha', `${valor}%`);
+        });
+
+        // Função para trocar a simulação ao clicar nos botões
+        function mudarSimulacao(chave, elementoBotao) {
+            const config = simulacoes[chave];
+
+            // Atualiza as imagens
+            imgBase.src = config.imagem;
+            imgSobreposta.src = config.imagem;
+
+            // Atualiza os filtros
+            imgSobreposta.style.filter = config.filtro;
+            // Se a simulação tiver um filtro específico para a base (como o filtro azul), aplica, senão tira.
+            imgBase.style.filter = config.filtroBase ? config.filtroBase : "none";
+
+            // Atualiza os textos
+            labelEsq.textContent = config.textoEsq;
+            labelDir.textContent = config.textoDir;
+
+            // Volta o slider para o meio por padrão
+            slider.value = 50;
+            imgSobreposta.style.clipPath = `polygon(0 0, 50% 0, 50% 100%, 0 100%)`;
+            container.style.setProperty('--posicao-linha', `50%`);
+
+            // Atualiza a classe 'ativo' dos botões para o botão clicado ficar azul
+            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('ativo'));
+            elementoBotao.classList.add('ativo');
+        }
+
+        // Inicia a aplicação com a primeira simulação (Antirreflexo)
+        window.onload = () => {
+            mudarSimulacao('antirreflexo', document.querySelector('.btn.ativo'));
+        };
+    </script>
+</body>
+</html>

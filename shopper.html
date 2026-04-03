@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Shopper IA - WillWeb</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a; /* Fundo escuro para destacar a câmera */
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        p {
+            color: #aaaaaa;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            background-color: #000;
+            border: 2px solid #333;
+        }
+
+        /* O vídeo da webcam */
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+            /* Inverte a câmera horizontalmente para parecer um espelho real */
+            transform: scaleX(-1); 
+        }
+
+        /* O canvas onde a IA vai desenhar os pontos do rosto depois */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Para não atrapalhar cliques */
+        }
+
+        .loading-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: #fff;
+            z-index: 0;
+        }
+
+        .painel-recomendacao {
+            margin-top: 30px;
+            background: #2a2a2a;
+            padding: 20px 40px;
+            border-radius: 12px;
+            text-align: center;
+            border-left: 4px solid #0866ff;
+            display: none; /* Escondido até a IA analisar o rosto */
+        }
+
+        .btn-analisar {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background-color: #0866ff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-analisar:hover {
+            background-color: #0052d6;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Descubra seus Óculos Ideais</h1>
+    <p>Nossa Inteligência Artificial analisa o formato do seu rosto.</p>
+
+    <div class="camera-container">
+        <div class="loading-text" id="status-camera">Ligando câmera...</div>
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
+    </div>
+
+    <button class="btn-analisar" id="btn-analisar">Analisar Meu Rosto</button>
+
+    <div class="painel-recomendacao" id="painel-resultados">
+        <h3 id="resultado-formato">Analisando...</h3>
+        <p id="resultado-dica">Aguarde a leitura facial.</p>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const statusCamera = document.getElementById('status-camera');
+        const btnAnalisar = document.getElementById('btn-analisar');
+        const painelResultados = document.getElementById('painel-resultados');
+
+        // Função para iniciar a Webcam do usuário
+        async function iniciarCamera() {
+            try {
+                // Pede permissão para acessar o vídeo
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" } // 'user' força a câmera frontal no celular
+                });
+                
+                video.srcObject = stream;
+                
+                // Quando o vídeo começar a rodar, tira o texto de "Carregando"
+                video.onloadedmetadata = () => {
+                    statusCamera.style.display = 'none';
+                };
+            } catch (err) {
+                console.error("Erro ao acessar a câmera: ", err);
+                statusCamera.textContent = "Câmera bloqueada ou não encontrada.";
+                statusCamera.style.color = "#ff4444";
+            }
+        }
+
+        // Simula o clique do botão (A IA vai entrar aqui na próxima etapa)
+        btnAnalisar.addEventListener('click', () => {
+            painelResultados.style.display = 'block';
+            document.getElementById('resultado-formato').textContent = "Calibrando IA...";
+            document.getElementById('resultado-dica').textContent = "Na próxima etapa, vamos conectar o cérebro da aplicação aqui.";
+        });
+
+        // Liga a câmera assim que a página carregar
+        window.addEventListener('load', iniciarCamera);
+    </script>
+</body>
+</html>
