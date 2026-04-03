@@ -105,7 +105,7 @@
 
     <button class="btn-analisar" id="btn-analisar" disabled>Aguarde...</button>
 
-    <img id="img-oculos" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Sunglasses_icon.svg/512px-Sunglasses_icon.svg.png" style="display:none;" crossorigin="anonymous">
+    <img id="img-oculos" src="oculos.png" style="display:none;">
 
     <script>
         const video = document.getElementById('video');
@@ -123,33 +123,50 @@
                 video.srcObject = stream;
             } catch (err) {
                 statusIA.textContent = "Erro na câmera.";
+                console.error(err);
             }
         }
 
         async function carregarIA() {
-            await Promise.all([
-                faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
-                faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL)
-            ]);
-            
-            statusIA.textContent = "Pronto!";
-            statusIA.style.color = "#00ff00";
-            setTimeout(() => statusIA.style.display = 'none', 2000);
-            
-            btnAnalisar.textContent = "Ligar Provador Virtual";
-            btnAnalisar.classList.add('pronto');
-            btnAnalisar.disabled = false;
+            try {
+                // Carrega os modelos de detecção de rosto e pontos faciais
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODELS_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL)
+                ]);
+
+                // Garante que a imagem do óculos também carregou (essencial para evitar erro no canvas)
+                if (!imgOculos.complete) {
+                    statusIA.textContent = "Carregando imagem...";
+                    await new Promise(resolve => imgOculos.onload = resolve);
+                }
+                
+                statusIA.textContent = "Pronto!";
+                statusIA.style.color = "#00ff00";
+                setTimeout(() => statusIA.style.display = 'none', 2000);
+                
+                btnAnalisar.textContent = "Ligar Provador Virtual";
+                btnAnalisar.classList.add('pronto');
+                btnAnalisar.disabled = false;
+
+            } catch (e) {
+                statusIA.textContent = "Erro ao carregar IA.";
+                console.error(e);
+            }
         }
 
-        // A Mágica do Loop em Tempo Real
+        // Loop em Tempo Real
         async function loopProvador() {
-            // Se o vídeo pausar, para o loop
             if (video.paused || video.ended || !provadorAtivo) return;
 
             const displaySize = { width: video.videoWidth, height: video.videoHeight };
-            faceapi.matchDimensions(overlay, displaySize);
+            
+            // Garante que o canvas tem o mesmo tamanho interno do vídeo
+            if (overlay.width !== displaySize.width) {
+                faceapi.matchDimensions(overlay, displaySize);
+            }
 
-            // Escaneia o rosto muito rápido a cada frame do vídeo
+            // Escaneia o rosto a cada frame
             const deteccoes = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
 
             const ctx = overlay.getContext('2d');
@@ -163,47 +180,54 @@
                 const olhoEsq = landmarks.positions[36];
                 const olhoDir = landmarks.positions[45];
 
-                // 1. Calcula a largura do óculos (Distância entre os olhos * um multiplicador)
+                // 1. Calcula a largura do óculos
                 const dx = olhoDir.x - olhoEsq.x;
                 const dy = olhoDir.y - olhoEsq.y;
                 const distanciaOlhos = Math.sqrt(dx * dx + dy * dy);
-                const larguraOculos = distanciaOlhos * 2.2; // 2.2 é ideal para cobrir as têmporas
+                const larguraOculos = distanciaOlhos * 2.2; // Multiplicador para cobrir a têmpora
 
-                // 2. Calcula a altura proporcional à imagem original
+                // 2. Calcula a altura proporcional
+                // Se a imagem não carregou, evita divisão por zero
+                if (imgOculos.width === 0) return requestAnimationFrame(loopProvador);
                 const proporcaoImagem = imgOculos.height / imgOculos.width;
                 const alturaOculos = larguraOculos * proporcaoImagem;
 
-                // 3. Calcula a inclinação (ângulo) da cabeça
+                // 3. Calcula a inclinação da cabeça
                 const angulo = Math.atan2(dy, dx);
 
-                // 4. Calcula o centro (entre os dois olhos)
+                // 4. Calcula o centro
                 const centroX = (olhoEsq.x + olhoDir.x) / 2;
                 const centroY = (olhoEsq.y + olhoDir.y) / 2;
 
-                // Desenha o óculos no rosto!
+                // Desenha o óculos no canvas
                 ctx.save();
                 ctx.translate(centroX, centroY);
                 ctx.rotate(angulo);
-                // Desenha puxando metade do tamanho para cada lado para centralizar
+                // Centraliza a imagem no ponto calculado
                 ctx.drawImage(imgOculos, -larguraOculos / 2, -alturaOculos / 2, larguraOculos, alturaOculos);
                 ctx.restore();
             }
 
-            // Chama a função de novo instantaneamente para o próximo frame
+            // Chama o próximo frame
             requestAnimationFrame(loopProvador);
         }
 
         btnAnalisar.addEventListener('click', () => {
             if (!provadorAtivo) {
+                // Tenta forçar o carregamento da imagem se não tiver
+                if (!imgOculos.complete || imgOculos.width === 0) {
+                    alert("A imagem do óculos ainda não carregou ou não foi encontrada no repositório. Verifique se o arquivo 'oculos.png' existe.");
+                    return;
+                }
                 provadorAtivo = true;
                 btnAnalisar.textContent = "Desligar Provador";
-                btnAnalisar.style.backgroundColor = "#ff4444"; // Fica vermelho para desligar
-                loopProvador(); // Inicia o rastreamento
+                btnAnalisar.style.backgroundColor = "#ff4444";
+                loopProvador();
             } else {
                 provadorAtivo = false;
                 btnAnalisar.textContent = "Ligar Provador Virtual";
                 btnAnalisar.style.backgroundColor = "#0866ff";
-                overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height); // Limpa a tela
+                overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
             }
         });
 
